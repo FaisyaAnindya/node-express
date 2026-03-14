@@ -1,4 +1,4 @@
-name: Node.js CI/CD Pipeline (Self-Hosted)
+name: Node.js 4-Stage Pipeline
 
 on:
   push:
@@ -7,27 +7,42 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # TAHAP CI & PR CHECK (Sesuai Diagram)
-  build-and-test:
+  # JOB 1: BUILD
+  build:
     runs-on: self-hosted
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: TAHAP 2.1 - Build (Install Dependencies)
+      - uses: actions/checkout@v4
+      - name: Install Dependencies
         run: npm install
 
-      - name: TAHAP 1 - Automated Testing
+  # JOB 2: TEST (Berjalan setelah Build selesai)
+  test:
+    needs: build
+    runs-on: self-hosted
+    steps:
+      - name: Run Unit Tests
         run: npm test
 
-  # TAHAP CD (Hanya jalan kalau sudah Merge ke Main)
-  deploy:
-    needs: build-and-test
+  # JOB 3: RELEASE (Hanya di branch main setelah Test sukses)
+  release:
+    needs: test
     if: github.ref == 'refs/heads/main'
     runs-on: self-hosted
     steps:
-      - name: TAHAP Release & Deploy
+      - name: Create Release Artifact
         run: |
-          echo "Deploying to VM..."
-          # Perintah untuk menjalankan aplikasi di background (misal pakai PM2)
-          # pm2 restart server.js || pm2 start server.js --name "node-app"
+          echo "Membuat artifact untuk versi: ${{ github.sha }}"
+          tar -czf release-${{ github.sha }}.tar.gz app server.js package.json
+
+  # JOB 4: DEPLOY (Hanya di branch main setelah Release sukses)
+  deploy:
+    needs: release
+    if: github.ref == 'refs/heads/main'
+    runs-on: self-hosted
+    steps:
+      - name: Deploy Application
+        run: |
+          echo "Deploying to production environment..."
+          # Contoh: restart aplikasi dengan PM2
+          # pm2 restart node-app || pm2 start server.js --name node-app
+
