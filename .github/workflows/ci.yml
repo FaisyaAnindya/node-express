@@ -1,0 +1,33 @@
+name: Node.js CI/CD Pipeline (Self-Hosted)
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # TAHAP CI & PR CHECK (Sesuai Diagram)
+  build-and-test:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: TAHAP 2.1 - Build (Install Dependencies)
+        run: npm install
+
+      - name: TAHAP 1 - Automated Testing
+        run: npm test
+
+  # TAHAP CD (Hanya jalan kalau sudah Merge ke Main)
+  deploy:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: self-hosted
+    steps:
+      - name: TAHAP Release & Deploy
+        run: |
+          echo "Deploying to VM..."
+          # Perintah untuk menjalankan aplikasi di background (misal pakai PM2)
+          # pm2 restart server.js || pm2 start server.js --name "node-app"
